@@ -10,8 +10,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.List;
+import java.net.URI;
 
 @RestController
 @RequestMapping("/medicos")
@@ -21,14 +22,32 @@ public class MedicoController {
     private MedicoRepository medicoRepository;
 
     @PostMapping
-    public void registrarMedico(@RequestBody @Valid DatosRegistroMedico datosRegistroMedico) {
-        medicoRepository.save(new Medico(datosRegistroMedico));
+    public ResponseEntity<DatosRespuestaMedico> registrarMedico(@RequestBody @Valid DatosRegistroMedico datosRegistroMedico,
+                                          UriComponentsBuilder uriComponentsBuilder) {
+        Medico medico = medicoRepository.save(new Medico(datosRegistroMedico));
+        DatosRespuestaMedico datosRespuestaMedico = new DatosRespuestaMedico(medico.getId(), medico.getNombre(),
+                medico.getEmail(),medico.getTelefono(), medico.getEspecialidad().toString(),
+                new DatosDireccion(medico.getDireccion().getCalle(),
+                        medico.getDireccion().getDistrito(),
+                        medico.getDireccion().getCiudad(),
+                        medico.getDireccion().getNumero(),
+                        medico.getDireccion().getComplemento()));
+        // Return 201 created
+        // URL donde encontrar al medico
+        // String url = "http://localhost:8080/medicos/"+medico.getId().toString();
+        URI url = uriComponentsBuilder.path("/medicos/{id}").buildAndExpand(medico.getId()).toUri();
+        // GET http://localhost:8080/medicos/nn
+        return ResponseEntity.created(url).body(datosRespuestaMedico);
     }
 
+//    @GetMapping
+//    public Page<DatosListadoMedico> listadoMedicos(@PageableDefault(size = 2) Pageable paginacion) {
+////        return medicoRepository.findAll(paginacion).map(DatosListadoMedico::new);
+//        return medicoRepository.findByActivoTrue(paginacion).map(DatosListadoMedico::new);
+//    }
     @GetMapping
-    public Page<DatosListadoMedico> listadoMedicos(@PageableDefault(size = 2) Pageable paginacion) {
-//        return medicoRepository.findAll(paginacion).map(DatosListadoMedico::new);
-        return medicoRepository.findByActivoTrue(paginacion).map(DatosListadoMedico::new);
+    public ResponseEntity<Page<DatosListadoMedico>> listadoMedicos(@PageableDefault(size = 2) Pageable paginacion) {
+        return ResponseEntity.ok(medicoRepository.findByActivoTrue(paginacion).map(DatosListadoMedico::new));
     }
 
     @PutMapping
@@ -52,13 +71,19 @@ public class MedicoController {
     public ResponseEntity eliminarMedico(@PathVariable Long id) {
         Medico medico = medicoRepository.getReferenceById(id);
         medico.desactivarMedico();
-        return ResponseEntity.noContent().build();   // retorna posiblem un 204
+        return ResponseEntity.noContent().build();   // retorna posiblemente un 204
     }
-
-//    DELETE EN BASE DE DATOD
-//    public void eliminarMedico(@PathVariable Long id) {
-//        Medico medico = medicoRepository.getReferenceById(id);
-//        medicoRepository.delete(medico);
-//    }
-
+    // mostrar solo el medico que esta en la url del header
+    @GetMapping("/{id}")
+    public ResponseEntity<DatosRespuestaMedico> retornaDatosMedico(@PathVariable Long id) {
+        Medico medico = medicoRepository.getReferenceById(id);
+        var datosMedico = new DatosRespuestaMedico(medico.getId(), medico.getNombre(),
+                medico.getEmail(),medico.getTelefono(), medico.getEspecialidad().toString(),
+                new DatosDireccion(medico.getDireccion().getCalle(),
+                        medico.getDireccion().getDistrito(),
+                        medico.getDireccion().getCiudad(),
+                        medico.getDireccion().getNumero(),
+                        medico.getDireccion().getComplemento()));
+        return ResponseEntity.ok(datosMedico);
+    }
 }
