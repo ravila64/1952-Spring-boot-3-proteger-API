@@ -14,6 +14,6 @@ public class AutenticacionService implements UserDetailsService {
     // metodo generado automaticamente posicion en AutenticacionService (implements methods)
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return usuarioRepository.findByUserName(username);
+        return usuarioRepository.findByLogin(username);
     }
 }
